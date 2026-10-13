@@ -1,7 +1,7 @@
 package com.bible.tts
 
+import android.media.AudioAttributes
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioTrack
 import android.os.Bundle
 import android.view.View
@@ -88,18 +88,24 @@ class MainActivity : AppCompatActivity() {
         binding.btnGenerate.setOnClickListener {
             generateAudio()
         }
+        
+        // Show model info button
+        binding.btnModelInfo.setOnClickListener {
+            showModelInfo()
+        }
     }
     
     private fun initializeTTS() {
         binding.progressBar.visibility = View.VISIBLE
-        binding.textViewStatus.text = "Loading Kokoro TTS Engine..."
+        binding.textViewStatus.text = "⚡ Loading Kokoro 82M Engine..."
         
         lifecycleScope.launch {
             try {
                 tts.initialize()
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = "✅ Engine Ready!"
+                binding.textViewStatus.text = "✅ Engine Ready! Kokoro 82M loaded successfully."
                 binding.btnGenerate.isEnabled = true
+                binding.btnModelInfo.isEnabled = true
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
                 binding.textViewStatus.text = "❌ Error: ${e.message}"
@@ -140,8 +146,9 @@ class MainActivity : AppCompatActivity() {
                 binding.progressBar.visibility = View.GONE
                 binding.textViewStatus.text = """
                     ✅ Generated ${String.format("%.2f", duration)}s audio in ${elapsed}ms
-                    ⚡ RTF: ${String.format("%.2f", rtf)}x
-                    💾 Saved to: ${outputFile.absolutePath}
+                    ⚡ Real-Time Factor: ${String.format("%.2f", rtf)}x
+                    💾 Saved: ${outputFile.absolutePath}
+                    🎙️ Voice: $selectedVoice | 🌐 Lang: $selectedLangCode
                 """.trimIndent()
                 
                 binding.btnGenerate.isEnabled = true
@@ -155,12 +162,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    private fun showModelInfo() {
+        val info = tts.getModelInfo()
+        binding.textViewStatus.text = info
+    }
+    
     private fun playAudio(samples: FloatArray, sampleRate: Int) {
         val audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
-                android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
             .setAudioFormat(
