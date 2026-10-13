@@ -16,11 +16,9 @@ class KokoroTTS(private val context: Context) {
         val modelDir = File(context.cacheDir, "kokoro")
         modelDir.mkdirs()
         
-        // Copy assets to cache directory for Sherpa-ONNX to read
         copyAsset("kokoro/model.onnx", File(modelDir, "model.onnx"))
         copyAsset("kokoro/tokens.txt", File(modelDir, "tokens.txt"))
         
-        // Voices file is optional in some Sherpa Kokoro packages, but we copy it if it exists
         val voicesFile = File(modelDir, "voices.bin")
         if (context.assets.list("kokoro")?.contains("voices.bin") == true) {
             copyAsset("kokoro/voices.bin", voicesFile)
@@ -50,12 +48,10 @@ class KokoroTTS(private val context: Context) {
             voice = if (voicesFile.exists()) voicesFile.absolutePath else ""
         )
 
-        tts = OfflineTts(assetManager = context.assets, config = config)
+        tts = OfflineTts(config = config)
     }
 
     suspend fun synthesize(text: String, voice: String, speed: Float, langCode: String): Pair<FloatArray, Int> = withContext(Dispatchers.IO) {
-        // Sherpa Kokoro multi-lang v1.0 speaker mapping:
-        // 0-49 are typically English, 50+ are other languages (Hindi is often in the 50-60 range)
         val speakerId = getSpeakerId(voice)
         
         val audio = tts?.generate(text, speakerId = speakerId, speed = speed)
@@ -67,8 +63,8 @@ class KokoroTTS(private val context: Context) {
 
     private fun getSpeakerId(voice: String): Int {
         return when (voice) {
-            "am_adam" -> 0      // Default English male voice in multi-lang v1.0
-            "hm_omega" -> 55    // Hindi male voice (approximate index for multi-lang)
+            "am_adam" -> 0
+            "hm_omega" -> 55
             else -> 0
         }
     }
