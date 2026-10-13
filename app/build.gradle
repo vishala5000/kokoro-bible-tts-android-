@@ -15,10 +15,21 @@ android {
         versionName "1.0"
     }
 
+    signingConfigs {
+        release {
+            // Will be overridden by CI, but needed for local builds
+            storeFile file('release-key.jks')
+            storePassword 'android'
+            keyAlias 'key0'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     
@@ -35,8 +46,16 @@ android {
         viewBinding true
     }
     
+    // Don't compress model files
     aaptOptions {
         noCompress "onnx", "bin"
+    }
+    
+    // Increase asset size limit for large model files
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
 
