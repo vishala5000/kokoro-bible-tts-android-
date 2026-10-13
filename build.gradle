@@ -12,8 +12,6 @@ buildscript {
     }
 }
 
-// Removed the conflicting 'allprojects' block
-
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
