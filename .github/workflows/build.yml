@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
     
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -31,7 +32,7 @@ jobs:
       uses: android-actions/setup-android@v3
       
     - name: Cache Gradle packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.gradle/caches
@@ -72,7 +73,7 @@ jobs:
         
         # Align APK with zipalign
         echo "🔧 Aligning APK..."
-        zipalign -v -p 4 "$UNSIGNED_APK" app-aligned.apk
+        $ANDROID_HOME/build-tools/34.0.0/zipalign -v -p 4 "$UNSIGNED_APK" app-aligned.apk
         
         # Sign with apksigner
         echo "✍️ Signing APK..."
@@ -91,14 +92,14 @@ jobs:
         echo "✅ Signature verified!"
         
     - name: Upload Signed APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: BibleTTS-Release
         path: BibleTTS-Signed.apk
         retention-days: 30
         
     - name: Upload Keystore (Optional)
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Keystore
         path: release-key.jks
