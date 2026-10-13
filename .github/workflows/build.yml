@@ -1,4 +1,4 @@
-name: Build & Sign APK
+name: Build & Auto-Sign APK
 
 on:
   push:
@@ -20,10 +20,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: Download Kokoro Model
+    - name: Download Kokoro 82M Model
       run: |
+        echo "📥 Downloading Kokoro 82M ONNX model..."
         chmod +x download_model.sh
         ./download_model.sh
+        echo "✅ Model download complete!"
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
@@ -41,23 +43,63 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
-    - name: Build with Gradle
+    - name: Build APK
       run: ./gradlew assembleRelease
       
-    - name: Sign APK
-      id: sign_apk
-      uses: r0adkll/sign-android-release@v1
-      with:
-        releaseDirectory: app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
-      env:
-        BUILD_TOOLS_VERSION: "34.0.0"
+    - name: Generate Keystore & Sign APK
+      run: |
+        echo "🔐 Generating temporary keystore..."
+        
+        # Generate keystore
+        keytool -genkey -v -keystore release-key.jks \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias key0 \
+          -storepass android \
+          -keypass android \
+          -dname "CN=Android Debug,O=Android,C=US"
+        
+        echo "✅ Keystore generated"
+        
+        # Find the unsigned APK
+        UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-release-unsigned.apk" | head -n 1)
+        
+        if [ -z "$UNSIGNED_APK" ]; then
+          echo "❌ Unsigned APK not found!"
+          exit 1
+        fi
+        
+        echo "📦 Found unsigned APK: $UNSIGNED_APK"
+        
+        # Align APK with zipalign
+        echo "🔧 Aligning APK..."
+        zipalign -v -p 4 "$UNSIGNED_APK" app-aligned.apk
+        
+        # Sign with apksigner
+        echo "✍️ Signing APK..."
+        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+          --ks release-key.jks \
+          --ks-key-alias key0 \
+          --ks-pass pass:android \
+          --key-pass pass:android \
+          --out BibleTTS-Signed.apk \
+          app-aligned.apk
+        
+        echo "✅ APK signed successfully!"
+        
+        # Verify signature
+        $ANDROID_HOME/build-tools/34.0.0/apksigner verify BibleTTS-Signed.apk
+        echo "✅ Signature verified!"
         
     - name: Upload Signed APK
       uses: actions/upload-artifact@v3
       with:
         name: BibleTTS-Release
-        path: ${{steps.sign_apk.outputs.signedReleaseFile}}
+        path: BibleTTS-Signed.apk
+        retention-days: 30
+        
+    - name: Upload Keystore (Optional)
+      uses: actions/upload-artifact@v3
+      with:
+        name: Keystore
+        path: release-key.jks
+        retention-days: 7
