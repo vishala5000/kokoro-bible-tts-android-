@@ -21,12 +21,12 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         
-    - name: Download Kokoro 82M Model
+    - name: Download Kokoro 82M Model & Sherpa-ONNX Library
       run: |
-        echo "📥 Downloading Kokoro 82M ONNX model..."
+        echo "📥 Downloading Kokoro 82M INT8 model and Sherpa-ONNX library..."
         chmod +x download_model.sh
         ./download_model.sh
-        echo "✅ Model download complete!"
+        echo "✅ Download complete!"
         
     - name: Auto-Generate Gradle Wrapper
       run: |
