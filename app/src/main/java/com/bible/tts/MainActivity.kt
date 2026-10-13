@@ -34,7 +34,6 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setupUI() {
-        // Setup language spinner
         val languages = VoiceCatalog.languages.map { it.displayName }
         val langAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, languages)
         langAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -45,21 +44,18 @@ class MainActivity : AppCompatActivity() {
                 val langConfig = VoiceCatalog.languages[position]
                 selectedLangCode = langConfig.langCode
                 
-                // Update voice spinner
                 val voices = langConfig.voices.map { it.displayName }
                 val voiceAdapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, voices)
                 voiceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                 binding.spinnerVoice.adapter = voiceAdapter
                 selectedVoice = langConfig.voices[0].id
                 
-                // Update default text
                 binding.editTextVerse.setText(VoiceCatalog.getDefaultText(selectedLangCode))
             }
             
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         
-        // Setup voice spinner
         binding.spinnerVoice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val langConfig = VoiceCatalog.languages.first { it.langCode == selectedLangCode }
@@ -69,11 +65,9 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         
-        // Default text
         binding.editTextVerse.setText(VoiceCatalog.getDefaultText("en-us"))
         
-        // Speed slider
-        binding.seekBarSpeed.progress = 90 // 0.9 * 100
+        binding.seekBarSpeed.progress = 90
         binding.seekBarSpeed.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
                 val speed = progress / 100.0f
@@ -84,12 +78,10 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
         })
         
-        // Generate button
         binding.btnGenerate.setOnClickListener {
             generateAudio()
         }
         
-        // Show model info button
         binding.btnModelInfo.setOnClickListener {
             showModelInfo()
         }
@@ -97,18 +89,18 @@ class MainActivity : AppCompatActivity() {
     
     private fun initializeTTS() {
         binding.progressBar.visibility = View.VISIBLE
-        binding.textViewStatus.text = "⚡ Loading Kokoro 82M Engine..."
+        binding.textViewStatus.text = "Loading Kokoro 82M Engine..."
         
         lifecycleScope.launch {
             try {
                 tts.initialize()
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = "✅ Engine Ready! Kokoro 82M loaded successfully."
+                binding.textViewStatus.text = "Engine Ready! Kokoro 82M loaded successfully."
                 binding.btnGenerate.isEnabled = true
                 binding.btnModelInfo.isEnabled = true
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = "❌ Error: ${e.message}"
+                binding.textViewStatus.text = "Error: ${e.message}"
                 Toast.makeText(this@MainActivity, "Failed to initialize TTS", Toast.LENGTH_LONG).show()
             }
         }
@@ -124,7 +116,7 @@ class MainActivity : AppCompatActivity() {
         val speed = binding.seekBarSpeed.progress / 100.0f
         
         binding.progressBar.visibility = View.VISIBLE
-        binding.textViewStatus.text = "🎵 Generating audio..."
+        binding.textViewStatus.text = "Generating audio..."
         binding.btnGenerate.isEnabled = false
         
         lifecycleScope.launch {
@@ -136,26 +128,22 @@ class MainActivity : AppCompatActivity() {
                 val duration = samples.size.toFloat() / sampleRate
                 val rtf = elapsed / 1000.0 / duration
                 
-                // Save to WAV file
                 val outputFile = File(getExternalFilesDir(null), "bible_verse.wav")
                 saveWav(samples, sampleRate, outputFile)
                 
-                // Play audio
                 playAudio(samples, sampleRate)
                 
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = """
-                    ✅ Generated ${String.format("%.2f", duration)}s audio in ${elapsed}ms
-                    ⚡ Real-Time Factor: ${String.format("%.2f", rtf)}x
-                    💾 Saved: ${outputFile.absolutePath}
-                    🎙️ Voice: $selectedVoice | 🌐 Lang: $selectedLangCode
-                """.trimIndent()
+                binding.textViewStatus.text = "Generated ${String.format("%.2f", duration)}s audio in ${elapsed}ms\n" +
+                        "RTF: ${String.format("%.2f", rtf)}x\n" +
+                        "Saved: ${outputFile.absolutePath}\n" +
+                        "Voice: $selectedVoice | Lang: $selectedLangCode"
                 
                 binding.btnGenerate.isEnabled = true
                 
             } catch (e: Exception) {
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = "❌ Error: ${e.message}"
+                binding.textViewStatus.text = "Error: ${e.message}"
                 binding.btnGenerate.isEnabled = true
                 Toast.makeText(this@MainActivity, "Generation failed", Toast.LENGTH_LONG).show()
             }
@@ -194,35 +182,33 @@ class MainActivity : AppCompatActivity() {
     
     private fun saveWav(samples: FloatArray, sampleRate: Int, file: File) {
         FileOutputStream(file).use { fos ->
-            val dataSize = samples.size * 2 // 16-bit PCM
+            val dataSize = samples.size * 2
             val fileSize = 36 + dataSize
             
-            // WAV header
             fos.write("RIFF".toByteArray())
             fos.write(intToByteArray(fileSize))
             fos.write("WAVE".toByteArray())
             fos.write("fmt ".toByteArray())
-            fos.write(intToByteArray(16)) // Subchunk1Size
-            fos.write(shortToByteArray(1.toShort())) // AudioFormat (PCM)
-            fos.write(shortToByteArray(1.toShort())) // NumChannels
+            fos.write(intToByteArray(16))
+            fos.write(shortToByteArray(1.toShort()))
+            fos.write(shortToByteArray(1.toShort()))
             fos.write(intToByteArray(sampleRate))
-            fos.write(intToByteArray(sampleRate * 2)) // ByteRate
-            fos.write(shortToByteArray(2.toShort())) // BlockAlign
-            fos.write(shortToByteArray(16.toShort())) // BitsPerSample
+            fos.write(intToByteArray(sampleRate * 2))
+            fos.write(shortToByteArray(2.toShort()))
+            fos.write(shortToByteArray(16.toShort()))
             fos.write("data".toByteArray())
             fos.write(intToByteArray(dataSize))
             
-            // Convert float samples to 16-bit PCM
             val buffer = ShortArray(samples.size)
             for (i in samples.indices) {
-                buffer[i] = (samples[i] * 32767).toInt().toShort()
+                buffer[i] = (samples[i] * 32767f).toInt().toShort()
             }
             
-            // Write samples
             val byteBuffer = ByteArray(buffer.size * 2)
             for (i in buffer.indices) {
-                byteBuffer[i * 2] = (buffer[i].toInt() and 0xFF).toByte()
-                byteBuffer[i * 2 + 1] = (buffer[i].toInt() >> 8 and 0xFF).toByte()
+                val intValue = buffer[i].toInt()
+                byteBuffer[i * 2] = (intValue and 0xFF).toByte()
+                byteBuffer[i * 2 + 1] = ((intValue shr 8) and 0xFF).toByte()
             }
             fos.write(byteBuffer)
         }
@@ -231,16 +217,16 @@ class MainActivity : AppCompatActivity() {
     private fun intToByteArray(value: Int): ByteArray {
         return byteArrayOf(
             (value and 0xFF).toByte(),
-            (value >> 8 and 0xFF).toByte(),
-            (value >> 16 and 0xFF).toByte(),
-            (value >> 24 and 0xFF).toByte()
+            ((value shr 8) and 0xFF).toByte(),
+            ((value shr 16) and 0xFF).toByte(),
+            ((value shr 24) and 0xFF).toByte()
         )
     }
     
     private fun shortToByteArray(value: Short): ByteArray {
         return byteArrayOf(
             (value.toInt() and 0xFF).toByte(),
-            (value.toInt() >> 8 and 0xFF).toByte()
+            ((value.toInt() shr 8) and 0xFF).toByte()
         )
     }
     
