@@ -28,6 +28,29 @@ jobs:
         ./download_model.sh
         echo "✅ Model download complete!"
         
+    - name: Auto-Generate Gradle Wrapper
+      run: |
+        echo "⚙️ Auto-generating official Gradle Wrapper files..."
+        mkdir -p gradle/wrapper
+        
+        # Download official Gradle wrapper scripts and binary jar directly from Gradle's GitHub
+        curl -sSL https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradlew -o gradlew
+        curl -sSL https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradlew.bat -o gradlew.bat
+        curl -sSL https://raw.githubusercontent.com/gradle/gradle/v8.0.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+        
+        # Create the properties file
+        cat << 'EOF' > gradle/wrapper/gradle-wrapper.properties
+        distributionBase=GRADLE_USER_HOME
+        distributionPath=wrapper/dists
+        distributionUrl=https\://services.gradle.org/distributions/gradle-8.0-bin.zip
+        networkTimeout=10000
+        zipStoreBase=GRADLE_USER_HOME
+        zipStorePath=wrapper/dists
+        EOF
+        
+        chmod +x gradlew
+        echo "✅ Gradle Wrapper generated successfully!"
+
     - name: Cache Gradle packages
       uses: actions/cache@v4
       with:
@@ -37,20 +60,6 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
-
-    - name: Ensure Gradle Wrapper exists
-      run: |
-        if [ ! -f "gradlew" ]; then
-          echo "⚙️ Gradle wrapper missing. Auto-generating it..."
-          # Download a temporary Gradle distribution to generate the wrapper
-          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
-          unzip -q gradle-8.0-bin.zip
-          ./gradle-8.0/bin/gradle wrapper --gradle-version 8.0
-          # Clean up temporary files
-          rm -rf gradle-8.0-bin.zip gradle-8.0
-        fi
-        chmod +x gradlew
-        echo "✅ Gradle wrapper is ready!"
           
     - name: Build APK
       run: ./gradlew assembleRelease
@@ -108,10 +117,3 @@ jobs:
         name: BibleTTS-Release
         path: BibleTTS-Signed.apk
         retention-days: 30
-        
-    - name: Upload Keystore (Optional)
-      uses: actions/upload-artifact@v4
-      with:
-        name: Keystore
-        path: release-key.jks
-        retention-days: 7
