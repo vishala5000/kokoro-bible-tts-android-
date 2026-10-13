@@ -19,7 +19,6 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Removed signingConfig so it builds an unsigned APK for the CI to sign later
         }
     }
     
@@ -36,9 +35,8 @@ android {
         viewBinding true
     }
     
-    // Don't compress model files
     aaptOptions {
-        noCompress "onnx", "bin"
+        noCompress "onnx", "bin", "txt"
     }
 }
 
@@ -48,10 +46,9 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
-    // ONNX Runtime for Android
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.16.3'
+    // Sherpa-ONNX (Handles Kokoro phonemization and inference natively)
+    implementation 'com.github.k2-fsa:sherpa-onnx:1.10.30'
     
-    // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
 }
