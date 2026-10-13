@@ -3,8 +3,8 @@ package com.bible.tts
 import android.content.Context
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,6 +16,7 @@ class KokoroTTS(private val context: Context) {
         val modelDir = File(context.cacheDir, "kokoro")
         modelDir.mkdirs()
         
+        // Copy assets to cache directory for Sherpa-ONNX to read
         copyAsset("kokoro/model.onnx", File(modelDir, "model.onnx"))
         copyAsset("kokoro/tokens.txt", File(modelDir, "tokens.txt"))
         
@@ -24,17 +25,17 @@ class KokoroTTS(private val context: Context) {
             copyAsset("kokoro/voices.bin", voicesFile)
         }
 
+        // Configure specifically for Kokoro
+        val kokoroConfig = OfflineTtsKokoroModelConfig(
+            model = File(modelDir, "model.onnx").absolutePath,
+            tokens = File(modelDir, "tokens.txt").absolutePath,
+            voices = if (voicesFile.exists()) voicesFile.absolutePath else "",
+            lang = "en-us", // Default language, can be overridden per generation if needed
+            lengthScale = 1.0f
+        )
+
         val modelConfig = OfflineTtsModelConfig(
-            vits = OfflineTtsVitsModelConfig(
-                model = File(modelDir, "model.onnx").absolutePath,
-                tokens = File(modelDir, "tokens.txt").absolutePath,
-                dataDir = "",
-                dictDir = "",
-                lexicon = "",
-                noiseScale = 0.667f,
-                noiseScaleW = 0.8f,
-                lengthScale = 1.0f,
-            ),
+            kokoro = kokoroConfig,
             numThreads = 2,
             debug = false,
             provider = "cpu"
@@ -44,8 +45,7 @@ class KokoroTTS(private val context: Context) {
             model = modelConfig,
             ruleFsts = "",
             ruleFars = "",
-            maxNumSentences = 1,
-            voice = if (voicesFile.exists()) voicesFile.absolutePath else ""
+            maxNumSentences = 1
         )
 
         tts = OfflineTts(config = config)
@@ -54,7 +54,8 @@ class KokoroTTS(private val context: Context) {
     suspend fun synthesize(text: String, voice: String, speed: Float, langCode: String): Pair<FloatArray, Int> = withContext(Dispatchers.IO) {
         val speakerId = getSpeakerId(voice)
         
-        val audio = tts?.generate(text, speakerId = speakerId, speed = speed)
+        // Use 'sid' for speaker ID, not 'speakerId'
+        val audio = tts?.generate(text = text, sid = speakerId, speed = speed)
         
         val samples = audio?.samples ?: FloatArray(0)
         val sampleRate = audio?.sampleRate ?: 24000
@@ -63,8 +64,8 @@ class KokoroTTS(private val context: Context) {
 
     private fun getSpeakerId(voice: String): Int {
         return when (voice) {
-            "am_adam" -> 0
-            "hm_omega" -> 55
+            "am_adam" -> 0      // Default English male voice in multi-lang v1.0
+            "hm_omega" -> 55    // Hindi male voice (approximate index for multi-lang)
             else -> 0
         }
     }
