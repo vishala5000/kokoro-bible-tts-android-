@@ -28,9 +28,6 @@ jobs:
         ./download_model.sh
         echo "✅ Model download complete!"
         
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      
     - name: Cache Gradle packages
       uses: actions/cache@v4
       with:
@@ -71,13 +68,16 @@ jobs:
         
         echo "📦 Found unsigned APK: $UNSIGNED_APK"
         
+        # Use pre-installed Android Build Tools from ubuntu-latest
+        BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0
+        
         # Align APK with zipalign
         echo "🔧 Aligning APK..."
-        $ANDROID_HOME/build-tools/34.0.0/zipalign -v -p 4 "$UNSIGNED_APK" app-aligned.apk
+        $BUILD_TOOLS/zipalign -v -p 4 "$UNSIGNED_APK" app-aligned.apk
         
         # Sign with apksigner
         echo "✍️ Signing APK..."
-        $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+        $BUILD_TOOLS/apksigner sign \
           --ks release-key.jks \
           --ks-key-alias key0 \
           --ks-pass pass:android \
@@ -88,7 +88,7 @@ jobs:
         echo "✅ APK signed successfully!"
         
         # Verify signature
-        $ANDROID_HOME/build-tools/34.0.0/apksigner verify BibleTTS-Signed.apk
+        $BUILD_TOOLS/apksigner verify BibleTTS-Signed.apk
         echo "✅ Signature verified!"
         
     - name: Upload Signed APK
