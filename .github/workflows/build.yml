@@ -37,10 +37,21 @@ jobs:
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
+
+    - name: Ensure Gradle Wrapper exists
+      run: |
+        if [ ! -f "gradlew" ]; then
+          echo "⚙️ Gradle wrapper missing. Auto-generating it..."
+          # Download a temporary Gradle distribution to generate the wrapper
+          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip
+          unzip -q gradle-8.0-bin.zip
+          ./gradle-8.0/bin/gradle wrapper --gradle-version 8.0
+          # Clean up temporary files
+          rm -rf gradle-8.0-bin.zip gradle-8.0
+        fi
+        chmod +x gradlew
+        echo "✅ Gradle wrapper is ready!"
           
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
     - name: Build APK
       run: ./gradlew assembleRelease
       
