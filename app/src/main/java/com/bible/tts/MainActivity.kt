@@ -14,6 +14,9 @@ import com.bible.tts.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     
@@ -89,13 +92,13 @@ class MainActivity : AppCompatActivity() {
     
     private fun initializeTTS() {
         binding.progressBar.visibility = View.VISIBLE
-        binding.textViewStatus.text = "Loading Kokoro 82M Engine..."
+        binding.textViewStatus.text = "Loading Kokoro 82M INT8 Engine..."
         
         lifecycleScope.launch {
             try {
                 tts.initialize()
                 binding.progressBar.visibility = View.GONE
-                binding.textViewStatus.text = "Engine Ready! Kokoro 82M loaded successfully."
+                binding.textViewStatus.text = "Engine Ready! Kokoro 82M INT8 (Lightning Fast) loaded."
                 binding.btnGenerate.isEnabled = true
                 binding.btnModelInfo.isEnabled = true
             } catch (e: Exception) {
@@ -128,15 +131,17 @@ class MainActivity : AppCompatActivity() {
                 val duration = samples.size.toFloat() / sampleRate
                 val rtf = elapsed / 1000.0 / duration
                 
-                val outputFile = File(getExternalFilesDir(null), "bible_verse.wav")
+                // Save with timestamp so each generation is unique
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                val outputFile = File(getExternalFilesDir(null), "bible_verse_$timestamp.wav")
                 saveWav(samples, sampleRate, outputFile)
                 
                 playAudio(samples, sampleRate)
                 
                 binding.progressBar.visibility = View.GONE
                 binding.textViewStatus.text = "Generated ${String.format("%.2f", duration)}s audio in ${elapsed}ms\n" +
-                        "RTF: ${String.format("%.2f", rtf)}x\n" +
-                        "Saved: ${outputFile.absolutePath}\n" +
+                        "RTF: ${String.format("%.2f", rtf)}x (Lower = Faster)\n" +
+                        "Saved: ${outputFile.name}\n" +
                         "Voice: $selectedVoice | Lang: $selectedLangCode"
                 
                 binding.btnGenerate.isEnabled = true
